@@ -40,8 +40,8 @@ function filterText($text) {
 	}
 	*/
 
-	$text = htmlspecialchars($text);
-	#$text = mb_encode_numericentity($text);
+	$text = htmlspecialchars($text, ENT_SUBSTITUTE, 'UTF-8');
+  #$text = mb_encode_numericentity($text);
 	$text = preg_replace(Regex_URL::$expression, Regex_URL::$replacement, $text);
 	$text = preg_replace(Regex_Twitter::$expression, Regex_Twitter::$replacement, $text);
 	$text = preg_replace(Regex_WikiPage::$expression, Regex_WikiPage::$replacement, $text);
@@ -110,7 +110,7 @@ function formatLine($line, $mf=true) {
 	$line['line'] = stripIRCControlChars($line['line']);
 
   // Wiki edits
-	if(preg_match('/^\[\[(?<page>.+)\]\](?: (?<type>[!NM]*|delete))? (?<url>.+) \* (?<user>.+) \* (?:\((?<size>[+-]\d+)\))?(?:deleted)?(?<comment>.*)/', $line['line'], $match)) {
+	if(preg_match('/^\[\[(?<page>.+)\]\](?: (?<type>[!NM]*|delete|restore|upload|moved))? (?<url>.+) \* (?<user>.+) \* (?:\((?<size>[+-]\d+)\))?(?:deleted|restored|moved)?(?<comment>.*)/', $line['line'], $match)) {
 		$line['type'] = 'wiki';
 		$user = userForHost($match['user']);
 
@@ -131,24 +131,38 @@ function formatLine($line, $mf=true) {
 
 		if(trim($match['url']) == 'delete')
 		  $action = 'deleted';
+		elseif(trim($match['url']) == 'restore')
+		  $action = 'restored';
+		elseif(trim($match['url']) == 'upload')
+		  $action = 'uploaded';
+		elseif(trim($match['url']) == 'move')
+		  $action = 'moved';
 		elseif(strpos($match['type'], 'N') !== false)
 		  $action = 'created';
 		else
 		  $action = 'edited';
 
-		if($action == 'deleted') {
+		if(in_array($action, array('deleted','restored','uploaded','moved'))) {
+  		$line['diff'] = 'http://indiewebcamp.com/' . $match['page'];
   		if(preg_match('/"\[\[(.+)\]\]": (.+)/', $match['comment'], $dmatch)) {
-    		$match['page'] = $dmatch[1];
+    		$match['page'] = str_replace(' ','_',$dmatch[1]);
     		$match['comment'] = $dmatch[2];
   		}
-  		$line['diff'] = 'http://indiewebcamp.com/Special:Log/delete';
+  		if(preg_match('/moved \[\[([^\]]+)\]\] to \[\[([^\]]+)\]\](?:: (.*))?/', $match['comment'], $dmatch)) {
+    		$match['page'] = str_replace(' ','_',$dmatch[2]);
+    		$match['oldpage'] = str_replace(' ','_',$dmatch[1]);
+    		$match['comment'] = array_key_exists(3, $dmatch) ? $dmatch[3] : '';
+  		}
 		} else {
       $line['diff'] = $match['url'];
 		}
 		
 		$match['page'] = str_replace(' ', '_', $match['page']);
 
-		$line['line'] = $action . ' /' . $match['page'] . ($action == 'deleted' ? '' : ' (' . ($match['size']) . ')') . (trim($match['comment']) ? ' "' . trim($match['comment']) . '"' : '');
+		$line['line'] = $action 
+		  . ($action == 'moved' ? ' /' . $match['oldpage'] . ' to' : '') . ' /' . $match['page']
+		  . (in_array($action, array('deleted','restored','uploaded','moved')) ? '' : ' (' . ($match['size']) . ')') 
+		  . (trim($match['comment']) ? ' "' . trim($match['comment']) . '"' : '');
   }
 
 	// Old twitter citations	
@@ -248,7 +262,7 @@ function userForNick($nick) {
 	global $users;
 
 	foreach($users as $u) {
-		if(@strtolower($u->properties->nickname[0]) == strtolower($nick)) {
+		if(@strtolower($u->properties->nickname[0]) == strtolower(trim($nick,'_'))) {
 			return $u;
 		}
 	}
