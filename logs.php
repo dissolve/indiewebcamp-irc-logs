@@ -26,8 +26,8 @@ if(array_key_exists('timestamp', $_GET)) {
 	$prev = false;
 	$next = false;
 
-	if(file_exists($cacheFile)) {
-		$cache = json_decode(file_get_contents($cacheFile), true);
+	if(file_exists($cacheFile) && ($cacheData=file_get_contents($cacheFile))) {
+		$cache = json_decode($cacheData, true);
 		$current = $cache['current'];
 		$next = $cache['next'];
 		$prev = $cache['prev'];
@@ -66,11 +66,13 @@ if(array_key_exists('timestamp', $_GET)) {
   
     if($next) {
       // only cache if there are future lines
-  		file_put_contents($cacheFile, json_encode(array(
+      $cacheData = json_encode(array(
   			'current' => $current,
   			'next' => $next,
   			'prev' => $prev
-  		)));
+  		));
+  		if($cacheData) // Don't write an empty string (in case the json encode fails)
+  		  file_put_contents($cacheFile, $cacheData);
 		}
 	}
 	
@@ -113,6 +115,50 @@ if(
   include('logs-text.php');
   die();
 }
+
+ob_start();
+if(array_key_exists('timestamp', $_GET)) { 
+    ?>
+		<li>
+			<?php if($prev): 
+			  // special case for multiple lines in the same second
+			  $p = $prev[count($prev)-1];
+			  if($p['timestamp'] == $current['timestamp'] && array_key_exists(count($prev)-2, $prev))
+			    $p = $prev[count($prev)-2];
+			?>
+				<a href="/irc/<?= $p['day'] ?>/line/<?= $p['timestamp'] ?>" rel="prev">Back</a>
+			<?php else: ?>
+				<span class="disabled">Back</span>
+			<?php endif; ?>
+		</li>
+		<li>
+			<?php if($next): $n = $next[0]; ?>
+				<a href="/irc/<?= $n['day'] ?>/line/<?= $n['timestamp'] ?>" rel="next">Next</a>
+			<?php else: ?>
+				<span class="disabled">Next</span>
+			<?php endif; ?>
+		</li>
+    <?php 
+} else {
+    ?>
+		<li>
+			<?php if($yesterday): ?>
+				<a href="./<?= $yesterday ?>" rel="prev">Prev</a>
+			<?php else: ?>
+				<span class="disabled">Prev</span>
+			<?php endif; ?>
+		</li>
+		<li>
+			<?php if($tomorrow): ?>
+				<a href="./<?= $tomorrow ?>" rel="next">Next</a>
+			<?php else: ?>
+				<span class="disabled">Next</span>
+			<?php endif; ?>
+		</li>
+    <?php 
+}
+$nextPrevLinks = ob_get_clean();
+
 
 header('Content-Type: text/html; charset=utf-8');
 ob_start();
@@ -175,10 +221,14 @@ ob_start();
     vertical-align: middle;
 	}
 	
-	.topbar {
+	.topbar, .bottombar {
 		background-color: #e3d5d5;
 		margin-bottom: 0px;
 		padding: 3px;
+	}
+	.bottombar { 
+  	padding-top: 10px;
+  	padding-bottom: 10px;
 	}
 	.topbar h2, .topbar h3 {
 		float: left;
@@ -190,14 +240,14 @@ ob_start();
 		margin-right: 20px;
 		margin-left: 10px;
 	}
-	.topbar ul.right {
+	.topbar ul.right, .bottombar ul.right {
 		float: right;
 		list-style-type: none;
 		margin: 0;
 		padding: 0;
 		margin-right: 10px;
 	}
-	.topbar ul.right li {
+	.topbar ul.right li, .bottombar ul.right li {
 		float: left;
 		margin-left: 20px;
 		line-height: 26px;
@@ -259,49 +309,14 @@ ob_start();
 	<h2><a href="/IRC/logs">#indiewebcamp</a></h2>
 	<h3><a href="/irc/<?= $currentDay ?>"><?= $dateTitle ?></a></h3>
 	<ul class="right">
-                <li>
-                  <form action="http://www.google.com/search" method="get" style="margin-bottom: 0;">
-                    <input type="text" name="q" placeholder="Search">
-                    <input type="submit" value="Search">
-                    <input type="hidden" name="as_sitesearch" value="indiewebcamp.com/irc">
-                  </form>
-                </li>
-	<?php if(array_key_exists('timestamp', $_GET)) { ?>
-		<li>
-			<?php if($prev): 
-			  // special case for multiple lines in the same second
-			  $p = $prev[count($prev)-1];
-			  if($p['timestamp'] == $current['timestamp'] && array_key_exists(count($prev)-2, $prev))
-			    $p = $prev[count($prev)-2];
-			?>
-				<a href="/irc/<?= $p['day'] ?>/line/<?= $p['timestamp'] ?>" rel="prev">Back</a>
-			<?php else: ?>
-				<span class="disabled">Back</span>
-			<?php endif; ?>
-		</li>
-		<li>
-			<?php if($next): $n = $next[0]; ?>
-				<a href="/irc/<?= $n['day'] ?>/line/<?= $n['timestamp'] ?>" rel="next">Next</a>
-			<?php else: ?>
-				<span class="disabled">Next</span>
-			<?php endif; ?>
-		</li>
-	<?php } else { ?>
-		<li>
-			<?php if($yesterday): ?>
-				<a href="./<?= $yesterday ?>" rel="prev">Prev</a>
-			<?php else: ?>
-				<span class="disabled">Prev</span>
-			<?php endif; ?>
-		</li>
-		<li>
-			<?php if($tomorrow): ?>
-				<a href="./<?= $tomorrow ?>" rel="next">Next</a>
-			<?php else: ?>
-				<span class="disabled">Next</span>
-			<?php endif; ?>
-		</li>
-	<?php } ?>
+    <li>
+      <form action="http://www.google.com/search" method="get" style="margin-bottom: 0;">
+        <input type="text" name="q" placeholder="Search">
+        <input type="submit" value="Search">
+        <input type="hidden" name="as_sitesearch" value="indiewebcamp.com/irc">
+      </form>
+    </li>
+    <?= $nextPrevLinks ?>
 	</ul>
 	<div class="clear"></div>
 </div>
@@ -334,28 +349,63 @@ ob_start();
 		?>
 	<?php } else { ?>
 		<div id="top" class="skip"><a href="#bottom">jump to bottom</a></div>
-		<?php
-		$lines = 0;
-		while($line=$logs->fetch()) {
-			echo formatLine($line);
-			$lines++;
-		}
-		?>
+		<div id="log-lines">
+  		<?php
+  		$lines = 0;
+  		while($line=$logs->fetch()) {
+  			echo formatLine($line);
+  			$lines++;
+  		}
+  		?>
+		</div>
 		<div id="bottom" class="skip"><a href="#top">jump to top</a></div>
 	<?php } ?>
 </div>
 
+<div class="bottombar">
+	<ul class="right">
+	  <?php if(!array_key_exists('beta', $_GET)) { ?>
+  	  <li><a href="http://webchat.freenode.net/?channels=indiewebcamp&nick=indie-visitor">join the chat</a></li>
+	  <?php } ?>
+    <?= $nextPrevLinks ?>
+  </ul>
+  <?php if(array_key_exists('beta', $_GET)) {
+    echo file_get_contents('chat.php');
+  } ?>
+  <div class="clear"></div>
+</div>
+
 <script type="text/javascript">
-	if(window.location.hash) {
-		var n = document.getElementById(window.location.hash.replace('#',''));
-		n.classList.add('hilite');
-	}
-	window.addEventListener("hashchange", function(){
-	  var n = document.getElementsByClassName('line');
-	  Array.prototype.filter.call(n, function(el){ el.classList.remove('hilite') });
-		var n = document.getElementById(window.location.hash.replace('#',''));
-		n.classList.add('hilite');
-	}, false);
+  if(window.location.hash) {
+  	var n = document.getElementById(window.location.hash.replace('#',''));
+  	n.classList.add('hilite');
+  }
+  window.addEventListener("hashchange", function(){
+    var n = document.getElementsByClassName('line');
+    Array.prototype.filter.call(n, function(el){ el.classList.remove('hilite') });
+  	var n = document.getElementById(window.location.hash.replace('#',''));
+  	n.classList.add('hilite');
+  }, false);
+
+<?php if(!array_key_exists('timestamp', $_GET) && isset($date) && date('Y-m-d') == $date): ?>
+  // Streaming logs
+  if("WebSocket" in window) {
+    var ws = new WebSocket(window.location.origin.replace(/https?/,"ws")+":8090");
+    ws.onopen = function(event) {
+      // console.log('connection established');
+    }
+    ws.onmessage = function(event) {
+      var autoScroll = (window.innerHeight + window.scrollY) >= document.body.offsetHeight;
+      var line = document.createElement('div');
+      line.innerHTML = event.data
+      document.getElementById('log-lines').appendChild(line);
+      // Auto-scroll if the window is already scrolled to the bottom
+      if(autoScroll) {
+        window.scrollTo(0,document.body.scrollHeight);
+      }
+    }
+  }
+<?php endif; ?>
 </script>
 </body>
 </html>

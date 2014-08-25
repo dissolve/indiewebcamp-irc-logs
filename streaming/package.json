@@ -1,0 +1,11 @@
+{
+  "name": "irc-streaming",
+  "version": "0.1.0",
+  "main": "irc-streaming.js",
+  "dependencies": {
+    "redis": "~0.8.5",
+    "ws": "~0.4.31",
+    "irc": "~0.3.7",
+    "escape-html": "*"
+  }
+}

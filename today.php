@@ -22,5 +22,5 @@ if(array_key_exists('HTTP_REFERER', $_SERVER) && $_SERVER['HTTP_REFERER'] == 'ht
 	die();
 }
 
-header('Location: /irc/' . date('Y-m-d'));
+header('Location: /irc/' . date('Y-m-d') . (array_key_exists('beta',$_GET) ? '?beta' : ''));
 
