@@ -99,7 +99,7 @@ function formatLine($line, $mf=true) {
   	  $avatar = '<div class="avatar"><img src="' . $user->properties->photo[0] . '" width="20" height="20"></div>';
 	  }
 		$who = $avatar . '<span class="' . ($mf ? 'p-author h-card' : '') . '">'
-			. '<a href="' . @$user->properties->url[0] . '" class="author ' . ($mf ? 'p-nickname p-name u-url' : '') . ' target="_blank">' . $line['nick'] . '</a>'
+			. '<a href="' . @$user->properties->url[0] . '" class="author ' . ($mf ? 'p-nickname p-name u-url' : '') . '" target="_blank">' . $line['nick'] . '</a>'
 			. '</span>';
 	} else {
 		$who = $avatar . '<span class="' . ($mf ? 'p-author h-card' : '') . '">'
