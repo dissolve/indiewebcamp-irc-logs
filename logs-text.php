@@ -34,7 +34,7 @@ if(array_key_exists('timestamp', $_GET)) {
 }
 
 function formatLineText($line) {
-	echo date('Y-m-d H:i:s', $line['timestamp']) . "\t";
+	echo date('Y-m-d H:i:s', round($line['timestamp']/1000)) . "\t";
 	if($line['type'] == 64) {
   	echo "-->\t";
 	} else {

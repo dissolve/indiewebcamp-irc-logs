@@ -1,7 +1,7 @@
 <?php
 include('inc.php');
 
-refreshUsers();
+// refreshUsers();
 loadUsers();
 
 function respondFromCache($cacheFile) {

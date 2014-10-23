@@ -26,10 +26,10 @@
   display: none;
 }
 #join_prompt button {
-  background: #b8ceb6;
   padding: 4px;
   font-size: 15px;
-  border: 1px #a1bb9e solid;
+  background: #94dfef;
+  border: 1px #78cee1 solid;
   border-radius: 4px;
 }
 #connection_status_field, #message {
