@@ -211,7 +211,7 @@ function formatLine($line, $mf=true) {
 	if($line['type'] == 'twitter' && preg_match('/^RT /', $line['line']))
 		$classes[] = 'retweet';
 	
-	echo '<div id="t' . $line['timestamp'] . '" class="' . ($mf ? 'h-entry' : '') . ' line msg-' . $types[$line['type']] . ' ' . implode(' ', $classes) . '">';
+	echo '<div id="t' . $line['timestamp'] . '" class="' . (($mf && $types[$line['type']] != 'join') ? 'h-entry' : '') . ' line msg-' . $types[$line['type']] . ' ' . implode(' ', $classes) . '">';
 	  echo '<a href="' . $urlInContext . '" class="hash">#</a> ';
 	
 		echo '<time class="dt-published" datetime="' . $date->format('c') . '">';
@@ -237,11 +237,18 @@ function formatLine($line, $mf=true) {
 }
 
 function refreshUsers() {
-	if(filemtime('users.json') < time() - 300) {
+	//if(filemtime('users.json') < time() - 300) {
 		$users = file_get_contents('http://pin13.net/mf2/?url=http%3A%2F%2Findiewebcamp.com%2Firc-people');
-		if(trim($users))
-			file_put_contents('users.json', $users);
-	}
+		if(trim($users)) {
+		  $data = json_decode($users);
+		  if($data && property_exists($data, 'items') && count($data->items) && count($data->items[1])) {
+		    $er = fopen('php://stderr', 'w');
+		    fputs($er, 'found ' . count($data->items[1]->children) . ' items'."\n");
+		    fclose($er);
+  			file_put_contents('users.json', $users);
+			}
+		}
+	//}
 }
 
 $users = array();
