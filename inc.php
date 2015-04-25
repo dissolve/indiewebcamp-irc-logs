@@ -7,6 +7,7 @@ define('PDO_DSN', 'mysql:dbname=nerdhaus;host=db.node');
 define('PDO_USER', 'cronos');
 define('PDO_PASS', 'node');
 
+
 $types = array(
 	2 => 'message',
 	64 => 'join',
@@ -255,14 +256,16 @@ $users = array();
 
 function loadUsers() {
 	global $users;
-	$data = json_decode(file_get_contents('users.json'));
-	if(property_exists($data, 'items') && property_exists($data->items[1], 'children')) {
-  	foreach($data->items[1]->children as $item) {
-  		if(in_array('h-card', $item->type)) {
-  			$users[] = $item;
-  		}
-  	}
-	}
+    if(file_exists('users.json')){
+        $data = json_decode(file_get_contents('users.json'));
+        if(property_exists($data, 'items') && property_exists($data->items[1], 'children')) {
+            foreach($data->items[1]->children as $item) {
+                if(in_array('h-card', $item->type)) {
+                    $users[] = $item;
+                }
+            }
+        }
+    }
 }
 
 function userForNick($nick) {

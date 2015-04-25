@@ -96,7 +96,7 @@ wss.on('connection', function(ws) {
         var match;
         if(match=data.message.match(/^\/([a-z]+) ([^ ]+) (.+)/)) {
           if(match[1] == "me") {
-            client.say(irc_channel, '\u0001ACTION '+match[2]+'\u0001');
+            client.say(irc_channel, '\u0001ACTION '+match[2]+ ' ' + match[3] + '\u0001');
           } else if(match[1] == "msg") {
             client.say(match[2], match[3]);
           } else {
