@@ -12,7 +12,11 @@
 
 <div id="chat" class="hidden">
   <input type="text" id="message" autocomplete="off">
+  <span id="notify_control" class="hidden">
+    <button type="button" id="notify_btn">Enable Notifications</button>
+  </span>
 </div>
+
 
 <div id="irc_notice" class="hidden"><div class="pad">
   <button type="button" class="close" id="close_notice_btn">×</button>
@@ -31,6 +35,17 @@
   background: #94dfef;
   border: 1px #78cee1 solid;
   border-radius: 4px;
+}
+#notify_control button {
+  font-size: 15px;
+  background: #ccc;
+  border: 1px #999 solid;
+  border-radius: 4px;
+  float:right;
+}
+#notify_control button.enabled {
+  border: 1px #78cee1 solid;
+  background: #94dfef;
 }
 #connection_status_field, #message {
   width: 300px;
@@ -80,13 +95,41 @@ document.getElementById('close_notice_btn').addEventListener('click', function()
 
 if("WebSocket" in window) {
   var join_btn = document.getElementById('join_btn');
+  var notify_btn = document.getElementById('notify_btn');
   var message_box = document.getElementById('message');
   var nick_field = document.getElementById('nickname');
   var status_field = document.getElementById('connection_status_field');
+  var notify = false;
+  var nickname_regex = null;
+  var nickname_self_regex = null;
 
   join_btn.addEventListener('click', function(){
     document.getElementById('join_prompt').classList.add('hidden');
     document.getElementById('signin').classList.remove('hidden');
+  });
+
+  notify_btn.addEventListener('click', function(){
+    if(notify){
+        notify = false;
+        notify_btn.classList.remove('enabled');
+        notify_btn.innerHTML = 'Enabled Notifications';
+    } else {
+        if (!("Notification" in window)) {
+            alert("Notifications not supported on this browser.");
+        } else if (Notification.permission === "granted") {
+            notify = true;
+            notify_btn.classList.add('enabled');
+            notify_btn.innerHTML = 'Disable Notifications';
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission(function (permission) {
+                if (permission === "granted") {
+                    notify = true;
+                    notify_btn.classList.add('enabled');
+                    notify_btn.innerHTML = 'Disable Notifications';
+                }
+            });
+        }
+    }
   });
 
   nick_field.addEventListener('keypress', function(e){
@@ -108,7 +151,11 @@ if("WebSocket" in window) {
       };
 
       ws.onopen = function(e) {
-        ws.send(nick_field.value);
+    
+        var nickname = nick_field.value;
+        nickname_regex = new RegExp(nickname, "i");
+        nickname_self_regex = new RegExp('^# \\d\\d:\\d\\d '+nickname, "i");
+        ws.send(nickname);
         console.log('websockets connection established, waiting to join channel');
 
         message_box.addEventListener("keypress", message_key_listener);
@@ -119,6 +166,9 @@ if("WebSocket" in window) {
         if(data.type == "connected") {
           document.getElementById('connection_status').classList.add('hidden');
           document.getElementById('chat').classList.remove('hidden');
+          if (!("Notification" in window)) {
+            document.getElementById('notify_control').classList.remove('hidden');
+          }
         } else if(data.type == "disconnected") {
           disconnected();
           message_box.removeEventListener("keypress", message_key_listener);
@@ -139,15 +189,34 @@ if("WebSocket" in window) {
 }
 
 function disconnected() {
+  notify = false;
+  notify_btn.classList.remove('enabled');
+  notify_btn.innerHTML = 'Enabled Notifications';
   document.getElementById('join_prompt').classList.remove('hidden');
   document.getElementById('signin').classList.add('hidden');
   document.getElementById('connection_status').classList.add('hidden');
   document.getElementById('chat').classList.add('hidden');
+  document.getElementById('notify_control').classList.add('hidden');
 }
 
 function show_notice(nick, text) {
   document.getElementById('irc_notice').classList.remove('hidden');
   document.getElementById('irc_notice_nick').innerHTML = nick;
   document.getElementById('irc_notice_text').innerHTML = text;
+}
+function check_alert(text){
+    if(notify){
+
+        if(text.match(nickname_regex) && !text.match(nickname_self_regex)) {
+
+            if (!("Notification" in window)) {
+                console.log("Notifications not supported on this browser.");
+            } else if (Notification.permission === "granted") {
+                var notification = new Notification(text);
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission();
+            }
+        }
+    }
 }
 </script>

@@ -403,6 +403,9 @@ ob_start();
       if(autoScroll) {
         window.scrollTo(0,document.body.scrollHeight);
       }
+      <?php if(array_key_exists('beta', $_GET)) {?>
+           check_alert(line.textContent || line.innerText || "");
+      <?php } ?>
     }
   }
 <?php endif; ?>
